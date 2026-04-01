@@ -1,0 +1,7 @@
+/* ── Premium design system must load before Tailwind overrides ── */
+@import './styles/theme.css';
+@import './styles/globals.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

@@ -1,0 +1,21 @@
+# Root
+.DS_Store
+*.log
+npm-debug.log*
+
+# Backend
+backend/.env
+backend/node_modules/
+backend/dist/
+
+# Frontend
+frontend/.env
+frontend/node_modules/
+frontend/dist/
+frontend/.vscode/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
