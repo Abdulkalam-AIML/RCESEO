@@ -37,7 +37,10 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginWithGoogle = useCallback(() => {
-    window.location.href = 'http://localhost:5001/api/auth/google';
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    // Remove trailing slash if present
+    const cleanBase = apiBase.replace(/\/$/, '');
+    window.location.href = `${cleanBase}/auth/google`;
   }, []);
 
   const openAuth = useCallback((mode = 'login') => {
