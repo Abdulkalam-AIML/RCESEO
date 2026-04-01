@@ -17,8 +17,49 @@ const rewriteRoutes = require('./src/routes/rewriteRoutes');
 const app = express();
 const isProd = process.env.NODE_ENV === 'production';
 
-// ── Connect Database ───────────────────────────────────────────────────────────
-connectDB();
+// ── Vercel Proxy Trust ────────────────────────────────────────────────────────
+app.set('trust proxy', 1);
+
+// ── Health Check (Moved up) ──────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  const dbStatus = {
+    0: 'disconnected',
+    1: 'connected',
+    2: 'connecting',
+    3: 'disconnecting',
+  }[dbState] || 'unknown';
+
+  res.json({
+    status: 'ok',
+    database: dbStatus,
+    environment: process.env.NODE_ENV || 'production',
+    uptime: `${Math.floor(process.uptime())}s`,
+    timestamp: new Date().toISOString(),
+    version: '1.2.0',
+  });
+});
+
+// ── Debug Route (Moved up) ──────────────────────────────────────────────────
+app.get('/api/debug', async (req, res) => {
+  try {
+    await connectDB();
+    res.json({
+      status: 'active',
+      mongo: mongoose.connection.readyState === 1 ? 'connected' : 'connecting',
+      jwt: !!process.env.JWT_SECRET,
+      google: !!process.env.GOOGLE_CLIENT_ID,
+      openrouter: !!process.env.OPENROUTER_API_KEY,
+      client: process.env.CLIENT_URL,
+      node_env: process.env.NODE_ENV,
+    });
+  } catch (error) {
+    res.status(500).json({
+      crash: error.message,
+      stack: isProd ? 'HIDDEN' : error.stack,
+    });
+  }
+});
 
 // ── Security Middleware ────────────────────────────────────────────────────────
 app.use(helmet({ crossOriginEmbedderPolicy: false }));
@@ -63,45 +104,9 @@ app.use(passport.initialize());
 app.use('/api/auth', authRoutes);
 app.use('/api/rewrite', rewriteRoutes);
 
-// ── Health Check ───────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => {
-  const dbState = mongoose.connection.readyState;
-  const dbStatus = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting',
-  }[dbState] || 'unknown';
+// ── Case Insensitive Routes Logic ──────────────────────────────────────────
+// (Handled by express by default)
 
-  res.json({
-    status: 'ok',
-    database: dbStatus,
-    environment: process.env.NODE_ENV || 'production',
-    uptime: `${Math.floor(process.uptime())}s`,
-    timestamp: new Date().toISOString(),
-    version: '1.1.0', // Incremented version for serverless fix
-  });
-});
-
-// ── Debug Route (URGENT FIX) ──────────────────────────────────────────────────
-app.get('/api/debug', async (req, res) => {
-  try {
-    await connectDB();
-    res.json({
-      mongo: mongoose.connection.readyState === 1 ? 'connected' : 'connecting',
-      jwt: !!process.env.JWT_SECRET,
-      google: !!process.env.GOOGLE_CLIENT_ID,
-      openrouter: !!process.env.OPENROUTER_API_KEY,
-      client: process.env.CLIENT_URL,
-      node_env: process.env.NODE_ENV,
-    });
-  } catch (error) {
-    res.status(500).json({
-      crash: error.message,
-      stack: isProd ? 'HIDDEN' : error.stack,
-    });
-  }
-});
 
 // ── 404 Handler ────────────────────────────────────────────────────────────────
 app.use((req, res) => {
