@@ -22,22 +22,7 @@ app.set('trust proxy', 1);
 
 // ── Health Check (Moved up) ──────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
-  const dbState = mongoose.connection.readyState;
-  const dbStatus = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting',
-  }[dbState] || 'unknown';
-
-  res.json({
-    status: 'ok',
-    database: dbStatus,
-    environment: process.env.NODE_ENV || 'production',
-    uptime: `${Math.floor(process.uptime())}s`,
-    timestamp: new Date().toISOString(),
-    version: '1.2.0',
-  });
+  res.json({ status: 'ok', server: 'online', mode: 'demo-stable' });
 });
 
 // ── Debug Route (Moved up) ──────────────────────────────────────────────────

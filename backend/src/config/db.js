@@ -1,26 +1,42 @@
 const mongoose = require('mongoose');
 
-let isConnected = false;
+let cached = global.mongoose;
+
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
 
 const connectDB = async () => {
-  if (isConnected || mongoose.connection.readyState === 1) {
-    console.log('✅ Using existing MongoDB connection');
-    return;
+  if (cached.conn) {
+    console.log('✅ Using cached MongoDB connection');
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      maxPoolSize: 5
+    };
+
+    console.log('📡 Connecting to MongoDB...');
+    cached.promise = mongoose.connect(process.env.MONGODB_URI, opts).then((mongoose) => {
+      console.log('✅ MongoDB Connected');
+      return mongoose;
+    });
   }
 
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      bufferCommands: false,
-    });
-    isConnected = true;
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error(`❌ MongoDB Connection Error: ${error.message}`);
-    // In serverless, we don't necessarily want to process.exit(1) 
-    // as it might kill the instance prematurely, but for debugging 
-    // we let it throw.
-    throw error;
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error(`❌ MongoDB Connection Error: ${e.message}`);
+    throw e;
   }
+
+  return cached.conn;
 };
 
 module.exports = connectDB;

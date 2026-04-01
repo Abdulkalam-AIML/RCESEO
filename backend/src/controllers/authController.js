@@ -87,14 +87,14 @@ const googleCallback = async (req, res) => {
   try {
     const token = generateToken(req.user._id);
 
-    // Record session for Google login
-    await Session.createSession(req.user._id, token, 'google').catch(() => {});
+    // Record session for Google login (non-blocking for demo speed)
+    Session.createSession(req.user._id, token, 'google').catch(() => {});
 
-    // Redirect to frontend Google success page with token in query string
-    res.redirect(`${process.env.CLIENT_URL}/google-success?token=${token}`);
+    // Redirect to frontend Google success page immediately
+    return res.redirect(`${process.env.CLIENT_URL}/google-success?token=${token}`);
   } catch (error) {
     console.error('Google callback error:', error);
-    res.redirect(`${process.env.CLIENT_URL}/login?error=google_failed`);
+    return res.redirect(`${process.env.CLIENT_URL}/login?error=google_failed`);
   }
 };
 
