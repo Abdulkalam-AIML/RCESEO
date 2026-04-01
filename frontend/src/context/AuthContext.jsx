@@ -37,8 +37,12 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const loginWithGoogle = useCallback(() => {
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-    // Remove trailing slash if present
+    // Production Vercel URL or local fallback
+    const isProd = !window.location.hostname.includes('localhost');
+    const apiBase = isProd 
+      ? 'https://rceseo-api.vercel.app/api'
+      : (import.meta.env.VITE_API_URL || 'http://localhost:5001/api');
+      
     const cleanBase = apiBase.replace(/\/$/, '');
     window.location.href = `${cleanBase}/auth/google`;
   }, []);
