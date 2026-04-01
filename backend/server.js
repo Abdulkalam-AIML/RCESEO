@@ -76,11 +76,31 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     database: dbStatus,
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env.NODE_ENV || 'production',
     uptime: `${Math.floor(process.uptime())}s`,
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
+    version: '1.1.0', // Incremented version for serverless fix
   });
+});
+
+// ── Debug Route (URGENT FIX) ──────────────────────────────────────────────────
+app.get('/api/debug', async (req, res) => {
+  try {
+    await connectDB();
+    res.json({
+      mongo: mongoose.connection.readyState === 1 ? 'connected' : 'connecting',
+      jwt: !!process.env.JWT_SECRET,
+      google: !!process.env.GOOGLE_CLIENT_ID,
+      openrouter: !!process.env.OPENROUTER_API_KEY,
+      client: process.env.CLIENT_URL,
+      node_env: process.env.NODE_ENV,
+    });
+  } catch (error) {
+    res.status(500).json({
+      crash: error.message,
+      stack: isProd ? 'HIDDEN' : error.stack,
+    });
+  }
 });
 
 // ── 404 Handler ────────────────────────────────────────────────────────────────
@@ -97,13 +117,13 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── Start Server ───────────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`🚀 Server: http://localhost:${PORT}`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔑 OpenRouter: ${process.env.OPENROUTER_API_KEY ? '✅ Active' : '❌ Missing'}`);
-  console.log(`🔐 Google OAuth: ${process.env.GOOGLE_CLIENT_ID ? '✅ Configured' : '❌ Missing'}`);
-});
+// ── Start Server (Local Development ONLY) ─────────────────────────────────────
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5001;
+  app.listen(PORT, () => {
+    console.log(`🚀 Local Server: http://localhost:${PORT}`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 
 module.exports = app;
